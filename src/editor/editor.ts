@@ -1,5 +1,6 @@
-import { basicSetup, EditorState, EditorView } from "@codemirror/basic-setup";
-import { EditorStateConfig } from "@codemirror/state";
+import { setup } from './setup';
+import { EditorState, EditorStateConfig } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { json } from "@codemirror/lang-json";
 
 const maxDimensionsTheme = EditorView.theme({
@@ -8,7 +9,7 @@ const maxDimensionsTheme = EditorView.theme({
 
 export function createJsonEditor(parent: Element | DocumentFragment, editorState: EditorStateConfig = {}) {
     const fullEditorStateConfig = Object.assign({
-        extensions: [basicSetup, json(), maxDimensionsTheme],
+        extensions: [setup, json(), maxDimensionsTheme],
     }, editorState)
 
     const view = new EditorView({

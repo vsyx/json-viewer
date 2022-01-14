@@ -1,8 +1,11 @@
 import React from 'react';
+import Editor from './editor';
 
 const App = (): React.ReactElement => {
     return (
-        <div>Helloo</div>
+        <>
+            <Editor />
+        </>
     );
 }
 

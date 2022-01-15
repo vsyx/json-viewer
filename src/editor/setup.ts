@@ -1,7 +1,7 @@
 import {keymap, highlightSpecialChars, drawSelection, highlightActiveLine} from "@codemirror/view"
 import {Extension, EditorState} from "@codemirror/state"
 import {history, historyKeymap} from "@codemirror/history"
-import {foldGutter, foldKeymap} from "@codemirror/fold"
+import {foldKeymap} from "@codemirror/fold"
 import {indentOnInput} from "@codemirror/language"
 import {lineNumbers, highlightActiveLineGutter} from "@codemirror/gutter"
 import {defaultKeymap} from "@codemirror/commands"
@@ -19,7 +19,6 @@ export const setup: Extension = [
     highlightActiveLineGutter(),
     highlightSpecialChars(),
     history(),
-    foldGutter(),
     drawSelection(),
     EditorState.allowMultipleSelections.of(true),
     indentOnInput(),

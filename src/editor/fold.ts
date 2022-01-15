@@ -1,8 +1,9 @@
 import { EditorView, Decoration, ViewPlugin, DecorationSet, ViewUpdate, WidgetType } from "@codemirror/view";
 import { Range } from "@codemirror/rangeset";
 import { codeFolding, unfoldEffect, foldEffect, foldedRanges } from "@codemirror/fold";
-import { combineConfig, EditorState, Facet, StateEffect } from "@codemirror/state";
+import { combineConfig, EditorState, Facet } from "@codemirror/state";
 import { foldable, syntaxTree } from "@codemirror/language";
+import { NodeType, Tree } from "@lezer/common";
 
 
 // unfortunately, foldState is not exported, therefore we either have to do this or rewrite the thing entirely
@@ -21,51 +22,105 @@ function foldInside(state: EditorState, from: number, to: number) {
     return found;
 }
 
-function foldAllDeep(view: EditorView, from: number) {
-    const effects: StateEffect<any>[] = [];
+// Identical to Tree.iterate, with the only exception being that 
+// returning false from enter callback will terminate the loop entirely
+function lazilyIterateTree(spec: {
+    tree: Tree,
+    enter: (type: NodeType, from: number, to: number) => boolean | void,
+    from: number,
+    to?: number
+}) {
+    const { tree, enter, from = 0, to = tree.length } = spec;
 
+    for (let c = tree.cursor(); ;) {
+        if (c.from <= to && c.to >= from) {
+            if (!c.type.isAnonymous && enter(c.type, c.from, c.to) === false) {
+                return;
+            }
+            if (c.firstChild()) {
+                continue;
+            }
+        }
+        for (; ;) {
+            if (c.nextSibling()) {
+                break;
+            }
+            if (!c.parent()) {
+                return;
+            }
+        }
+    }
+}
+
+function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
+    const ranges: { from: number, to: number }[] = [];
     const stack: Array<{ name: string, from: number, to: number }> = [];
-    let initiated = false;
+    const outerFrom = from;
 
-    syntaxTree(view.state).iterate({
-        from,
+    lazilyIterateTree({
+        from: outerFrom,
+        tree: syntaxTree(view.state),
         enter: ({ name }, from, to) => {
-            if (initiated && stack.length === 0) {
-                return false;
+            if (outerFrom > from) {
+                return;
             }
 
             switch (name) {
+                case 'Array':
+                case 'Object':
                 case 'JsonText': return;
                 case '[':
                 case '{': {
-                    if (!initiated) {
-                        initiated = true;
-                    }
                     stack.push({ name, from, to });
                     break;
                 }
                 case ']':
                 case '}': {
-                    const popped = stack.pop()!;
-                    const folded = foldInside(view.state, popped.from, popped.to);
-                    if (!folded) {
-                        effects.push(foldEffect.of({ from: popped.to, to: from }));
+                    const popped = stack.pop();
+                    if (!popped) {
+                        throw new Error("Mismatching brackets");
                     }
+                    ranges.push({ 
+                        from: popped.to,
+                        to: from 
+                    });
                     break;
                 }
-                default: return;
+            }
+
+            if (stack.length === 0) {
+                return false;
             }
             return;
-        }
+        },
     });
-    
-    console.log(effects);
+
+    return ranges;
+}
+
+function foldAllDeep(view: EditorView, from: number) {
+    const effects = getFoldableObjectAndArrayRanges(view, from)
+        .filter(({ from, to }) => !foldInside(view.state, from, to))
+        .map(range => foldEffect.of(range));
+
     if (effects.length) {
-        view.dispatch({ effects });
+        view.dispatch({ effects: effects });
     }
+
     return !!effects.length;
 }
 
+function unfoldAllDeep(view: EditorView, from: number) {
+    const effects = getFoldableObjectAndArrayRanges(view, from)
+        .filter(({ from, to }) => !!foldInside(view.state, from, to))
+        .map(range => unfoldEffect.of(range));
+
+    if (effects.length) {
+        view.dispatch({ effects: effects });
+    }
+
+    return !!effects.length;
+}
 
 interface FoldConfig {
     longPressTreshold: number;
@@ -100,17 +155,18 @@ class FoldingWidget extends WidgetType {
         button.setAttribute('data-long-press-delay', longPressTreshold.toString());
 
         button.addEventListener('long-press', event => {
-            console.log('long-press');
+            console.debug('long-press');
             const line = view.visualLineAt(view.posAtDOM(event.target as HTMLElement));
-
+            
             if (!this.folded) {
                 foldAllDeep(view, line.from);
             } else {
+                unfoldAllDeep(view, line.from);
             }
         });
 
         button.onclick = event => {
-            console.log('onClick');
+            console.debug('onClick');
             const line = view.visualLineAt(view.posAtDOM(event.target as HTMLElement));
             const folded = foldInside(view.state, line.from, line.to);
 

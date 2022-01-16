@@ -5,11 +5,6 @@ import { combineConfig, EditorState, Facet } from "@codemirror/state";
 import { foldable, syntaxTree, foldInside as foldInsideRange } from "@codemirror/language";
 import { NodeType, Tree, TreeCursor } from "@lezer/common";
 
-// unfortunately, foldState is not exported, therefore we either have to do this or rewrite the thing entirely
-// eslint-disable-next-line
-// @ts-ignore
-//const [foldState, baseTheme] = codeFolding() as [StateField<DecorationSet>, Extension];
-
 function foldInside(state: EditorState, from: number, to: number) {
     let found: { from: number, to: number } | null = null;
     foldedRanges(state).between(from, to, (from, to) => {

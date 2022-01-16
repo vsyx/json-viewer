@@ -199,8 +199,10 @@ export function foldPlugin() {
         update(update: ViewUpdate) {
             if (update.docChanged
                 || update.viewportChanged
-                || foldedRanges(update.startState) != foldedRanges(update.state))
+                || foldedRanges(update.startState) != foldedRanges(update.state)
+                || syntaxTree(update.startState).length != syntaxTree(update.state).length) {
                 this.foldDecorations = this.buildFoldDecorations(update.view);
+            }
         }
 
         buildFoldDecorations(view: EditorView) {
@@ -208,7 +210,7 @@ export function foldPlugin() {
 
             view.viewportLines(({ from, to }) => {
                 const widget = foldInside(view.state, from, to) ? foldedWidget
-                    : foldable(view.state, from, to) ?  unfoldedWidget
+                    : foldable(view.state, from, to) ? unfoldedWidget
                     : null;
 
                 if (widget !== null) {

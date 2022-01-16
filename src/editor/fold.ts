@@ -5,7 +5,6 @@ import { combineConfig, EditorState, Facet } from "@codemirror/state";
 import { foldable, syntaxTree } from "@codemirror/language";
 import { NodeType, Tree } from "@lezer/common";
 
-
 // unfortunately, foldState is not exported, therefore we either have to do this or rewrite the thing entirely
 // eslint-disable-next-line
 // @ts-ignore
@@ -57,6 +56,8 @@ function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
     const stack: Array<{ name: string, from: number, to: number }> = [];
     const outerFrom = from;
 
+    let foundRoot = false;
+
     lazilyIterateTree({
         from: outerFrom,
         tree: syntaxTree(view.state),
@@ -66,11 +67,9 @@ function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
             }
 
             switch (name) {
-                case 'Array':
-                case 'Object':
-                case 'JsonText': return;
                 case '[':
                 case '{': {
+                    foundRoot = true;
                     stack.push({ name, from, to });
                     break;
                 }
@@ -88,7 +87,7 @@ function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
                 }
             }
 
-            if (stack.length === 0) {
+            if (foundRoot && stack.length === 0) {
                 return false;
             }
             return;

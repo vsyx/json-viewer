@@ -2,8 +2,8 @@ import { EditorView, Decoration, ViewPlugin, DecorationSet, ViewUpdate, WidgetTy
 import { Range } from "@codemirror/rangeset";
 import { codeFolding, unfoldEffect, foldEffect, foldedRanges } from "@codemirror/fold";
 import { combineConfig, EditorState, Facet } from "@codemirror/state";
-import { foldable, syntaxTree } from "@codemirror/language";
-import { NodeType, Tree } from "@lezer/common";
+import { foldable, syntaxTree, foldInside as foldInsideRange } from "@codemirror/language";
+import { NodeType, Tree, TreeCursor } from "@lezer/common";
 
 // unfortunately, foldState is not exported, therefore we either have to do this or rewrite the thing entirely
 // eslint-disable-next-line
@@ -25,7 +25,7 @@ function foldInside(state: EditorState, from: number, to: number) {
 // returning false from enter callback will terminate the loop entirely
 function lazilyIterateTree(spec: {
     tree: Tree,
-    enter: (type: NodeType, from: number, to: number) => boolean | void,
+    enter: (spec: { type: NodeType, from: number, to: number, cursor: TreeCursor }) => boolean | void,
     from: number,
     to?: number
 }) {
@@ -33,7 +33,8 @@ function lazilyIterateTree(spec: {
 
     for (let c = tree.cursor(); ;) {
         if (c.from <= to && c.to >= from) {
-            if (!c.type.isAnonymous && enter(c.type, c.from, c.to) === false) {
+            const { from, to, type } = c;
+            if (!c.type.isAnonymous && enter({ from, to, type, cursor: c }) === false) {
                 return;
             }
             if (c.firstChild()) {
@@ -53,44 +54,27 @@ function lazilyIterateTree(spec: {
 
 function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
     const ranges: { from: number, to: number }[] = [];
-    const stack: Array<{ name: string, from: number, to: number }> = [];
     const outerFrom = from;
-
-    let foundRoot = false;
 
     lazilyIterateTree({
         from: outerFrom,
         tree: syntaxTree(view.state),
-        enter: ({ name }, from, to) => {
+        enter: ({type, from, cursor}) => {
             if (outerFrom > from) {
                 return;
             }
 
-            switch (name) {
-                case '[':
-                case '{': {
-                    foundRoot = true;
-                    stack.push({ name, from, to });
-                    break;
-                }
-                case ']':
-                case '}': {
-                    const popped = stack.pop();
-                    if (!popped) {
-                        throw new Error("Mismatching brackets");
+            switch (type.name) {
+                case 'Array':
+                case 'Object': {
+                    const node = cursor.node;
+                    const range = foldInsideRange(node);
+                    if (range) {
+                        ranges.push(range);
                     }
-                    ranges.push({ 
-                        from: popped.to,
-                        to: from 
-                    });
                     break;
                 }
             }
-
-            if (foundRoot && stack.length === 0) {
-                return false;
-            }
-            return;
         },
     });
 

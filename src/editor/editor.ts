@@ -5,7 +5,9 @@ import { json } from "@codemirror/lang-json";
 import { foldPlugin } from "./fold";
 
 const maxDimensionsTheme = EditorView.theme({
-    ".cm-content": { height: "100vh" },
+    "&": { height: "100vh" },
+    ".cm-scroller": { overflow: "auto" },
+    ".cm-content, .cm-gutter": {minHeight: "100vh"}
 });
 
 export function createJsonEditor(parent: Element | DocumentFragment, editorState: EditorStateConfig = {}) {

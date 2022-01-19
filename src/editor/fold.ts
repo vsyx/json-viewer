@@ -1,109 +1,9 @@
 import { EditorView, Decoration, ViewPlugin, DecorationSet, ViewUpdate, WidgetType } from "@codemirror/view";
 import { Range } from "@codemirror/rangeset";
 import { codeFolding, unfoldEffect, foldEffect, foldedRanges } from "@codemirror/fold";
-import { combineConfig, EditorState, Facet } from "@codemirror/state";
-import { foldable, syntaxTree, foldInside as foldInsideRange } from "@codemirror/language";
-import { NodeType, Tree, TreeCursor } from "@lezer/common";
-
-function isFoldInside(state: EditorState, from: number, to: number) {
-    let found: { from: number, to: number } | null = null;
-    foldedRanges(state).between(from, to, (from, to) => {
-        if (!found || found.from > from) {
-            found = { from, to };
-        }
-    });
-
-    return found;
-}
-
-// Identical to Tree.iterate, with the only exception being that 
-// returning false from enter callback will terminate the loop entirely
-function lazilyIterateTree(spec: {
-    tree: Tree,
-    enter: (spec: { type: NodeType, from: number, to: number, cursor: TreeCursor }) => boolean | null,
-    from: number,
-    to?: number
-}) {
-    const { tree, enter, from = 0, to = tree.length } = spec;
-
-    for (let c = tree.cursor(); ;) {
-        if (c.from <= to && c.to >= from) {
-            const { from, to, type } = c;
-            if (!c.type.isAnonymous && enter({ from, to, type, cursor: c }) === false) {
-                return;
-            }
-            if (c.firstChild()) {
-                continue;
-            }
-        }
-        for (; ;) {
-            if (c.nextSibling()) {
-                break;
-            }
-            if (!c.parent()) {
-                return;
-            }
-        }
-    }
-}
-
-function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
-    const ranges: Array<{ from: number, to: number }> = [];
-    const outerFrom = from;
-
-    lazilyIterateTree({
-        from: outerFrom,
-        tree: syntaxTree(view.state),
-        enter: ({ type, from, cursor }) => {
-            if (outerFrom > from) {
-                return null;
-            }
-
-            if (ranges.length != 0 && from >= ranges[0].to) {
-                return false;
-            }
-
-            switch (type.name) {
-                case 'Array':
-                case 'Object': {
-                    const node = cursor.node;
-                    const range = foldInsideRange(node);
-                    if (range) {
-                        ranges.push(range);
-                    }
-                    break;
-                }
-            }
-            return null;
-        },
-    });
-
-    return ranges;
-}
-
-function foldAllDeep(view: EditorView, from: number) {
-    const effects = getFoldableObjectAndArrayRanges(view, from)
-        .filter(({ from, to }) => !isFoldInside(view.state, from, to))
-        .map(range => foldEffect.of(range));
-
-    if (effects.length) {
-        view.dispatch({ effects: effects });
-    }
-
-    return !!effects.length;
-}
-
-function unfoldAllDeep(view: EditorView, from: number) {
-    const effects = getFoldableObjectAndArrayRanges(view, from)
-        .filter(({ from, to }) => !!isFoldInside(view.state, from, to))
-        .map(range => unfoldEffect.of(range));
-
-    if (effects.length) {
-        view.dispatch({ effects: effects });
-    }
-
-    return !!effects.length;
-}
+import { combineConfig, Facet } from "@codemirror/state";
+import { foldable, syntaxTree } from "@codemirror/language";
+import { unfoldAllDeep, foldAllDeep, isFoldInside } from './editorUtils';
 
 interface FoldConfig {
     longPressTreshold: number;
@@ -112,7 +12,6 @@ interface FoldConfig {
 const defaultFoldConfig: FoldConfig = {
     longPressTreshold: 500
 }
-
 
 const foldConfig = Facet.define<FoldConfig, Required<FoldConfig>>({
     combine: values => combineConfig(values, defaultFoldConfig)

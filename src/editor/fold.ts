@@ -20,7 +20,7 @@ function isFoldInside(state: EditorState, from: number, to: number) {
 // returning false from enter callback will terminate the loop entirely
 function lazilyIterateTree(spec: {
     tree: Tree,
-    enter: (spec: { type: NodeType, from: number, to: number, cursor: TreeCursor }) => boolean | void,
+    enter: (spec: { type: NodeType, from: number, to: number, cursor: TreeCursor }) => boolean | null,
     from: number,
     to?: number
 }) {
@@ -54,9 +54,13 @@ function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
     lazilyIterateTree({
         from: outerFrom,
         tree: syntaxTree(view.state),
-        enter: ({type, from, cursor}) => {
+        enter: ({ type, from, cursor }) => {
             if (outerFrom > from) {
-                return;
+                return null;
+            }
+
+            if (ranges.length != 0 && from >= ranges[0].to) {
+                return false;
             }
 
             switch (type.name) {
@@ -70,6 +74,7 @@ function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
                     break;
                 }
             }
+            return null;
         },
     });
 

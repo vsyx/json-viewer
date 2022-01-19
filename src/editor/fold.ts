@@ -5,7 +5,7 @@ import { combineConfig, EditorState, Facet } from "@codemirror/state";
 import { foldable, syntaxTree, foldInside as foldInsideRange } from "@codemirror/language";
 import { NodeType, Tree, TreeCursor } from "@lezer/common";
 
-function foldInside(state: EditorState, from: number, to: number) {
+function isFoldInside(state: EditorState, from: number, to: number) {
     let found: { from: number, to: number } | null = null;
     foldedRanges(state).between(from, to, (from, to) => {
         if (!found || found.from > from) {
@@ -48,7 +48,7 @@ function lazilyIterateTree(spec: {
 }
 
 function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
-    const ranges: { from: number, to: number }[] = [];
+    const ranges: Array<{ from: number, to: number }> = [];
     const outerFrom = from;
 
     lazilyIterateTree({
@@ -78,7 +78,7 @@ function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
 
 function foldAllDeep(view: EditorView, from: number) {
     const effects = getFoldableObjectAndArrayRanges(view, from)
-        .filter(({ from, to }) => !foldInside(view.state, from, to))
+        .filter(({ from, to }) => !isFoldInside(view.state, from, to))
         .map(range => foldEffect.of(range));
 
     if (effects.length) {
@@ -90,7 +90,7 @@ function foldAllDeep(view: EditorView, from: number) {
 
 function unfoldAllDeep(view: EditorView, from: number) {
     const effects = getFoldableObjectAndArrayRanges(view, from)
-        .filter(({ from, to }) => !!foldInside(view.state, from, to))
+        .filter(({ from, to }) => !!isFoldInside(view.state, from, to))
         .map(range => unfoldEffect.of(range));
 
     if (effects.length) {
@@ -108,9 +108,57 @@ const defaultFoldConfig: FoldConfig = {
     longPressTreshold: 500
 }
 
+
 const foldConfig = Facet.define<FoldConfig, Required<FoldConfig>>({
     combine: values => combineConfig(values, defaultFoldConfig)
 });
+
+interface CreateFoldConfig {
+    view: EditorView;
+    isFolded: boolean;
+}
+
+function createFoldButton({ view, isFolded }: CreateFoldConfig) {
+    const { longPressTreshold } = view.state.facet(foldConfig);
+
+    const wrap = document.createElement("span")
+    wrap.setAttribute("aria-hidden", "true")
+
+    const button = wrap.appendChild(document.createElement("button"));
+    button.textContent = (isFolded) ? '+' : '-';
+
+    button.setAttribute('data-long-press-delay', longPressTreshold.toString());
+
+    button.addEventListener('long-press', event => {
+        console.debug('long-press');
+        const line = view.visualLineAt(view.posAtDOM(event.target as HTMLElement));
+        
+        if (isFolded) {
+            unfoldAllDeep(view, line.from);
+        } else {
+            foldAllDeep(view, line.from);
+        }
+    });
+
+    button.onclick = event => {
+        console.debug('onClick');
+        const line = view.visualLineAt(view.posAtDOM(event.target as HTMLElement));
+        const folded = isFoldInside(view.state, line.from, line.to);
+
+        if (folded) {
+            view.dispatch({ effects: unfoldEffect.of(folded) });
+        } else {
+            const foldableLine = foldable(view.state, line.from, line.to);
+            if (foldableLine !== null) {
+                view.dispatch({ effects: foldEffect.of(foldableLine) });
+            }
+        }
+
+        event.preventDefault()
+    }
+
+    return wrap
+}
 
 class FoldingWidget extends WidgetType {
     constructor(readonly folded: boolean) {
@@ -122,50 +170,15 @@ class FoldingWidget extends WidgetType {
     }
 
     toDOM(view: EditorView): HTMLElement {
-        const { longPressTreshold } = view.state.facet(foldConfig);
-
-        const wrap = document.createElement("span")
-        wrap.setAttribute("aria-hidden", "true")
-
-        const button = wrap.appendChild(document.createElement("button"));
-        button.textContent = (this.folded) ? '+' : '-';
-
-        button.setAttribute('data-long-press-delay', longPressTreshold.toString());
-
-        button.addEventListener('long-press', event => {
-            console.debug('long-press');
-            const line = view.visualLineAt(view.posAtDOM(event.target as HTMLElement));
-            
-            if (!this.folded) {
-                foldAllDeep(view, line.from);
-            } else {
-                unfoldAllDeep(view, line.from);
-            }
+        return createFoldButton({
+            view,
+            isFolded: this.folded
         });
-
-        button.onclick = event => {
-            console.debug('onClick');
-            const line = view.visualLineAt(view.posAtDOM(event.target as HTMLElement));
-            const folded = foldInside(view.state, line.from, line.to);
-
-            if (folded) {
-                view.dispatch({ effects: unfoldEffect.of(folded) });
-            } else {
-                const foldableLine = foldable(view.state, line.from, line.to);
-                if (foldableLine !== null) {
-                    view.dispatch({ effects: foldEffect.of(foldableLine) });
-                }
-            }
-
-            event.preventDefault()
-        }
-
-        return wrap
     }
 }
 
 export function foldPlugin() {
-    const foldedWidget = new FoldingWidget(true);
+    //const foldedWidget = new FoldingWidget(true);
     const unfoldedWidget = new FoldingWidget(false);
 
     const folds = ViewPlugin.fromClass(class {
@@ -188,14 +201,15 @@ export function foldPlugin() {
             const decorations: Range<Decoration>[] = [];
 
             view.viewportLines(({ from, to }) => {
-                const widget = foldInside(view.state, from, to) ? foldedWidget
-                    : foldable(view.state, from, to) ? unfoldedWidget
+                const widget = !isFoldInside(view.state, from, to) 
+                    && foldable(view.state, from, to) ? unfoldedWidget
                     : null;
 
                 if (widget !== null) {
                     const deco = Decoration.widget({
                         widget,
                         side: 1,
+                        block: false
                     });
                     decorations.push(deco.range(to));
                 }
@@ -206,5 +220,7 @@ export function foldPlugin() {
         decorations: v => v.foldDecorations
     });
 
-    return [folds, codeFolding()];
+    return [folds, codeFolding({
+        placeholderDOM: (view) => createFoldButton({ view, isFolded: true })
+    })];
 }

@@ -1,4 +1,4 @@
-import { foldedRanges, foldEffect, unfoldEffect } from "@codemirror/fold";
+import { foldedRanges as getFoldedRanges, foldEffect, unfoldEffect } from "@codemirror/fold";
 import { syntaxTree, foldInside as foldInsideRange } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -7,7 +7,8 @@ import { BasicRange } from './types';
 
 export function isFoldInside(state: EditorState, from: number, to: number) {
     let found: BasicRange | null = null;
-    foldedRanges(state).between(from, to, (from, to) => {
+
+    getFoldedRanges(state).between(from, to, (from, to) => {
         if (!found || found.from > from) {
             found = { from, to };
         }
@@ -47,7 +48,11 @@ export function lazilyIterateTree(spec: {
     }
 }
 
-export function getFoldableObjectAndArrayRanges(view: EditorView, from: number) {
+export function getFoldableObjectAndArrayRanges(
+    view: EditorView,
+    from: number,
+    toLimitByFirst: boolean, 
+) {
     const ranges: Array<BasicRange> = [];
     const outerFrom = from;
 
@@ -59,7 +64,7 @@ export function getFoldableObjectAndArrayRanges(view: EditorView, from: number) 
                 return null;
             }
 
-            if (ranges.length != 0 && from >= ranges[0].to) {
+            if (toLimitByFirst && ranges.length != 0 && from >= ranges[0].to) {
                 return false;
             }
 
@@ -86,12 +91,11 @@ function foldAll(
     from: number,
     callback: (range: BasicRange) => ReturnType<typeof foldEffect.of>
 ) {
-    const effects = getFoldableObjectAndArrayRanges(view, from)
-        .filter(({ from, to }) => !!isFoldInside(view.state, from, to))
+    const effects = getFoldableObjectAndArrayRanges(view, from, true)
         .map(callback);
 
     if (effects.length) {
-        view.dispatch({ effects: effects });
+        view.dispatch({ effects });
     }
 
     return !!effects.length;
@@ -104,4 +108,3 @@ export function foldAllDeep(view: EditorView, from: number) {
 export function unfoldAllDeep(view: EditorView, from: number) {
     return foldAll(view, from, range => unfoldEffect.of(range));
 }
-

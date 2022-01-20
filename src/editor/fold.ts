@@ -105,6 +105,11 @@ export function foldPlugin() {
             const decorations: Range<Decoration>[] = [];
 
             view.viewportLines(({ from, to }) => {
+                const foldInside = isFoldInside(view.state, from, to);
+                if (foldInside) {
+                    return;
+                }
+
                 const widget = !isFoldInside(view.state, from, to) 
                     && foldable(view.state, from, to) ? unfoldedWidget
                     : null;

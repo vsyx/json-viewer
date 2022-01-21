@@ -1,10 +1,11 @@
 import { setup } from './setup';
 import { EditorState, EditorStateConfig, Transaction, TransactionSpec } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { json } from "@codemirror/lang-json";
+import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { foldPlugin } from "./fold";
 import { getIndentUnit } from '@codemirror/language';
 import { indentRangeSpec } from './editorUtils';
+import { linter } from '@codemirror/lint';
 
 const maxDimensionsTheme = EditorView.theme({
     "&": { height: "100vh" },
@@ -34,7 +35,7 @@ const indentOnPaste = EditorState.transactionFilter.of(tr => {
 
 export function createJsonEditor(parent: Element | DocumentFragment, editorState: EditorStateConfig = {}) {
     const fullEditorStateConfig = Object.assign({
-        extensions: [setup, json(), maxDimensionsTheme, foldPlugin(), indentOnPaste],
+        extensions: [setup, json(), linter(jsonParseLinter()), maxDimensionsTheme, foldPlugin(), indentOnPaste],
     }, editorState)
 
     const view = new EditorView({

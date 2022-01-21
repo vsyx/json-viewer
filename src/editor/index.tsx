@@ -14,7 +14,7 @@ const Editor = (): React.ReactElement => {
 
     
     return (
-        <div ref={parentRef} />
+        <div ref={parentRef} style={{ flex: '1' }} />
     );
 }
 

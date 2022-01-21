@@ -8,9 +8,8 @@ import { indentRangeSpec } from './editorUtils';
 import { linter } from '@codemirror/lint';
 
 const maxDimensionsTheme = EditorView.theme({
-    "&": { height: "100vh" },
-    ".cm-scroller": { overflow: "auto" },
-    ".cm-content, .cm-gutter": { minHeight: "100vh" }
+    "&": {height: "100%"},
+    ".cm-scroller": {overflow: "auto"}
 });
 
 const indentOnPaste = EditorState.transactionFilter.of(tr => {

@@ -37,6 +37,7 @@
   "devDependencies": {
     "@babel/core": "^7.12.3",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.1",
+    "@teamsupercell/typings-for-css-modules-loader": "^2.5.1",
     "@types/react": "^17.0.30",
     "@types/react-dom": "^17.0.10",
     "@types/react-router": "^5.1.8",

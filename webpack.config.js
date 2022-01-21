@@ -41,6 +41,7 @@ module.exports = (env, argv) => {
                     test: /\.s[ac]ss|css$/,
                     use: [
                         isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
+                        "@teamsupercell/typings-for-css-modules-loader",
                         {
                             loader: 'css-loader',
                             options: {

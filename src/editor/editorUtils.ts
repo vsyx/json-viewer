@@ -1,6 +1,6 @@
 import { foldedRanges as getFoldedRanges, foldEffect, unfoldEffect } from "@codemirror/fold";
-import { syntaxTree, foldInside as foldInsideRange } from "@codemirror/language";
-import { EditorState } from "@codemirror/state";
+import { syntaxTree, foldInside as foldInsideRange, getIndentUnit } from "@codemirror/language";
+import { ChangeSpec, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { NodeType, Tree, TreeCursor } from "@lezer/common";
 import { BasicRange } from './types';
@@ -107,4 +107,45 @@ export function foldAllDeep(view: EditorView, from: number) {
 
 export function unfoldAllDeep(view: EditorView, from: number) {
     return foldAll(view, from, range => unfoldEffect.of(range));
+}
+
+// TODO implement using syntaxTree so that it works on incomplete JSON structures
+export function indentRange({ state, dispatch }: EditorView, { from, to }: BasicRange) {
+    const targetString = state.sliceDoc(from, to).trim();
+    if (!targetString.trim().length) {
+        return false;
+    }
+
+    const changes = indentRangeSpec(targetString, { from, to }, getIndentUnit(state));
+
+    if (changes !== null) {
+        dispatch(state.update({ changes }));
+        return true;
+    }
+    
+    return false;
+}
+
+export function indentRangeSpec(str: string, { from, to }: BasicRange, indent: number): ChangeSpec | null {
+    try {
+        const parsedJson = JSON.parse(str);
+        return {
+            from,
+            to,
+            insert: JSON.stringify(
+                parsedJson,
+                null,
+                indent
+            )
+        }
+    } catch (err) {
+        if (err instanceof SyntaxError) {
+            return null;
+        }
+        throw err;
+    }
+}
+
+export function indentAll(view: EditorView) {
+    return indentRange(view, { from: 0, to: view.state.doc.length });
 }

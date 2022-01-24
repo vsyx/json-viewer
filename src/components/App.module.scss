@@ -1,0 +1,83 @@
+$settings-window-width: 20rem;
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    height: 1.5em;
+
+    .navRight {
+        flex: 0 0 $settings-window-width;
+
+        display: flex;
+        justify-content: flex-end;
+
+    }
+}
+
+.settingsWindow {
+    position: absolute;
+    display: flex;
+    justify-content: flex-end;
+    align-items: start;
+
+    width: $settings-window-width;
+    height: 100%;
+    transform-origin: 100% 50%;
+
+    background: white;
+}
+
+.settingsWindowEnterActive {
+    animation: in 0.1s linear forwards;
+    @keyframes in {
+        0% {
+            transform: scaleX(0);
+        }
+        100% {
+            transform: scaleX(1);
+        }
+    }
+}
+
+.settingsWindowExitActive {
+    animation: out 0.1s linear forwards;
+    @keyframes out {
+        0% {
+            transform: scaleX(1);
+        }
+        100% {
+            transform: scaleX(0);
+        }
+    }
+}
+
+.iconButton {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background: none;
+    border: none;
+    font-size: 1.5em;
+
+    &:hover {
+        cursor: pointer;
+    }
+
+    i:hover {
+        font-size: 1.1em;
+    }
+}
+
+
+.editor {
+    flex: 1;
+    transition: margin-right 0.12s;
+}
+
+.editorSettingsPadding {
+    margin-right: $settings-window-width;
+}
+

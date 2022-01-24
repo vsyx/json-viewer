@@ -2,7 +2,11 @@ import { EditorView } from '@codemirror/basic-setup';
 import React, { useRef, useEffect } from 'react';
 import { createJsonEditor } from './editor';
 
-const Editor = (): React.ReactElement => {
+interface Props {
+    className?: string;
+}
+
+function Editor(props: Props) {
     const parentRef = useRef(null);
     const editorRef = useRef<EditorView | null>(null);
 
@@ -14,8 +18,9 @@ const Editor = (): React.ReactElement => {
 
     
     return (
-        <div ref={parentRef} style={{ flex: '1' }} />
+        <div ref={parentRef} {...props}/>
     );
+
 }
 
 export default Editor;

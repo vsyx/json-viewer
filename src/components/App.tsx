@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import Editor from './editor';
-import { CSSTransition } from 'react-transition-group';
 import styles from './App.module.scss';
+
+import Editor from './editor';
+import Settings from './settings';
 
 const App = (): React.ReactElement => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -16,16 +17,7 @@ const App = (): React.ReactElement => {
                     <button onClick={toggleSettingsWindow} className={styles.iconButton}>
                         <i className="las la-cog"></i>
                     </button>
-                    <CSSTransition in={isSettingsOpen} timeout={200} unmountOnExit classNames={{
-                        enterActive: styles.settingsWindowEnterActive,
-                        exitActive: styles.settingsWindowExitActive
-                    }}> 
-                        <div className={styles.settingsWindow}>
-                            <button onClick={toggleSettingsWindow} className={styles.iconButton}>
-                                <i className="las la-times"></i>
-                            </button>
-                        </div>
-                    </CSSTransition>
+                    <Settings isSettingsOpen={isSettingsOpen} toggleSettingsWindow={toggleSettingsWindow} />
                 </div>
             </nav>
             <Editor className={`${styles.editor} ${isSettingsOpen ? styles.editorSettingsPadding : ""}`} />

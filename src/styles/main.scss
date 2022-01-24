@@ -1,0 +1,17 @@
+.iconButton {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background: none;
+    border: none;
+    font-size: 1.5em;
+
+    &:hover {
+        cursor: pointer;
+    }
+
+    i:hover {
+        font-size: 1.1em;
+    }
+}

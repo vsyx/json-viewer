@@ -3,12 +3,7 @@ declare namespace AppModuleScssNamespace {
     editor: string;
     editorSettingsPadding: string;
     iconButton: string;
-    in: string;
     navRight: string;
-    out: string;
-    settingsWindow: string;
-    settingsWindowEnterActive: string;
-    settingsWindowExitActive: string;
   }
 }
 

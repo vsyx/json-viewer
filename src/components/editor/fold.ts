@@ -1,21 +1,10 @@
 import { EditorView, Decoration, ViewPlugin, DecorationSet, ViewUpdate, WidgetType } from "@codemirror/view";
 import { Range } from "@codemirror/rangeset";
 import { codeFolding, unfoldEffect, foldEffect, foldedRanges } from "@codemirror/fold";
-import { combineConfig, Facet } from "@codemirror/state";
 import { foldable, syntaxTree } from "@codemirror/language";
 import { unfoldAllDeep, foldAllDeep, isFoldInside } from './editorUtils';
+import { longPressTreshold } from './facets';
 
-interface FoldConfig {
-    longPressTreshold: number;
-}
-
-const defaultFoldConfig: FoldConfig = {
-    longPressTreshold: 500
-}
-
-const foldConfig = Facet.define<FoldConfig, Required<FoldConfig>>({
-    combine: values => combineConfig(values, defaultFoldConfig)
-});
 
 interface CreateFoldConfig {
     view: EditorView;
@@ -23,15 +12,13 @@ interface CreateFoldConfig {
 }
 
 function createFoldButton({ view, isFolded }: CreateFoldConfig) {
-    const { longPressTreshold } = view.state.facet(foldConfig);
-
     const wrap = document.createElement("span")
     wrap.setAttribute("aria-hidden", "true")
 
     const button = wrap.appendChild(document.createElement("button"));
     button.textContent = (isFolded) ? '+' : '-';
 
-    button.setAttribute('data-long-press-delay', longPressTreshold.toString());
+    button.setAttribute('data-long-press-delay', view.state.facet(longPressTreshold).toString());
 
     button.addEventListener('long-press', event => {
         console.debug('long-press');

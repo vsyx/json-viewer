@@ -23,12 +23,12 @@ export const settingsSlice = createSlice({
     name: 'settings',
     initialState,
     reducers: {
-        setState: (state, action: PayloadAction<Partial<SettingsState>>) => (
+        setSettings: (state, action: PayloadAction<Partial<SettingsState>>) => (
             { ...state, ...action.payload }
         )
     }
 })
 
-export const { setState } = settingsSlice.actions
+export const { setSettings } = settingsSlice.actions
 export const selectSettings = (state: RootState) => state.settings;
 export default settingsSlice.reducer

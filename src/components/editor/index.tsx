@@ -1,10 +1,12 @@
 import { EditorView } from '@codemirror/basic-setup';
 import React, { useRef, useEffect } from 'react';
-import { createJsonEditor } from './editor';
+import { createEditorView } from './editor';
 
 import watch from 'redux-watch';
 import { store } from '../../store';
 import { selectSettings } from '../settings/settingsSlice';
+import { getShallowObjectChanges } from '../../utils/misc';
+import { CompartmentItem, COMPARTMENTS } from './facets';
 
 interface Props {
     className?: string;
@@ -19,12 +21,33 @@ function Editor(props: Props) {
     useEffect(() => {
         if (editorRef.current == null && parentRef.current != null) {
             const settings = getSettings();
-            editorRef.current = createJsonEditor(parentRef.current, { settings });
+            editorRef.current = createEditorView(parentRef.current, { settings });
         }
 
         const w = watch(getSettings);
         const unsubscribeFromStore = store.subscribe(w((newVal, oldVal) => {
-            console.log(newVal, oldVal);
+            const diffEntries = Object.entries(getShallowObjectChanges(oldVal, newVal))
+
+            if (!diffEntries.length || editorRef.current === null) {
+                return;
+            }
+
+            const effects = [];
+            const callbacks = [];
+
+            for (const [key, value] of diffEntries.filter(([key]) => key in COMPARTMENTS)) {
+                const { compartment, facet, postEffectCallback } = (COMPARTMENTS[key] as CompartmentItem<unknown>);
+                effects.push(compartment.reconfigure(facet.of(value)));
+
+                if (postEffectCallback) {
+                    callbacks.push(postEffectCallback);
+                }
+            }
+
+            const view = editorRef.current;
+            view.dispatch({ effects });
+
+            callbacks.forEach(callback => callback(view));
         }));
 
         return () => {

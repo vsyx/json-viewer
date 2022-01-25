@@ -41,7 +41,7 @@ interface EditorConfig {
     editorStateConfig?: EditorStateConfig;
 }
 
-export function createJsonEditor(parent: Element | DocumentFragment, config: EditorConfig) {
+export function generateExtensions(config: EditorConfig) {
     const settings = Object.entries(config.settings)
         .filter(([key]) => key in COMPARTMENTS)
         .map(([key, value]) => {
@@ -49,16 +49,14 @@ export function createJsonEditor(parent: Element | DocumentFragment, config: Edi
             return compartment.of(facet.of(value));
         });
 
-    const fullEditorStateConfig = Object.assign({
+    return Object.assign({
         extensions: [setup, settings, json(), linter(jsonParseLinter()), maxDimensionsTheme, foldPlugin(), indentOnPaste],
     }, config.editorStateConfig);
+}
 
-    const view = new EditorView({
+export function createEditorView(parent: Element | DocumentFragment, config: EditorConfig) {
+    return new EditorView({
         parent,
-        state: EditorState.create(fullEditorStateConfig),
+        state: EditorState.create(generateExtensions(config)),
     });
-
-    console.log(view.state.facet(EditorState.tabSize));
-
-    return view;
 }

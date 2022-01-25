@@ -1,5 +1,7 @@
 import { indentUnit } from "@codemirror/language";
 import { Compartment, Extension, Facet } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { indentAll } from "./editorUtils";
 
 function createBasicFacet<Type>(defaultValue: Type) {
     return Facet.define<Type, Type>({
@@ -16,45 +18,38 @@ export enum FacetValueType {
     Boolean
 }
 
-interface CompartmentItem<T, K = void> {
+export interface CompartmentItem<T> {
     compartment: Compartment;
     facet: Facet<T, T>;
     text: string;
     type: FacetValueType;
     defaultValue: T;
     createExtension: (initValue?: T) => Extension;
-    computeFromValue?: (value: K) => T;
+    postEffectCallback?: (view: EditorView) => void;
 }
 
 function createCompartment<T>({
     facet,
-    text,
-    type,
-    defaultValue
-}: {
-    facet: Facet<T, T>,
-    text: string,
-        type: FacetValueType,
-        defaultValue: T
-}): CompartmentItem<T> {
+    defaultValue,
+    ...rest
+}: Omit<CompartmentItem<T>, "compartment" | "createExtension">): CompartmentItem<T> {
     const compartment = new Compartment;
-
     return {
+        ...rest,
         compartment,
         facet,
-        text,
-        type,
         defaultValue,
         createExtension: (initValue?: T) => compartment.of(facet.of(initValue ?? defaultValue)),
     }
 }
 
-export const COMPARTMENTS = {
+export const COMPARTMENTS: { [key: string]: CompartmentItem<unknown> } = {
     indentUnit: createCompartment({
         facet: indentUnit,
         text: 'Number of spaces used for indentation',
         type: FacetValueType.Number,
         defaultValue: '    ',
+        postEffectCallback: (view) => indentAll(view)
     }),
     longPressTreshold: createCompartment({
         facet: longPressTreshold,

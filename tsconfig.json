@@ -17,7 +17,11 @@
         "strictNullChecks": true,
         "suppressImplicitAnyIndexErrors": true,
         "noUnusedLocals": true,
-        "esModuleInterop": true 
+        "esModuleInterop": true,
+        "typeRoots": [
+            "src/customTypings",
+            "node_modules/@types"
+        ]
     },
     "exclude": [
         "node_modules",

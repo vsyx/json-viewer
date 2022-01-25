@@ -1,4 +1,5 @@
-import { Compartment, EditorState, Facet } from "@codemirror/state";
+import { indentUnit } from "@codemirror/language";
+import { Compartment, Extension, Facet } from "@codemirror/state";
 
 function createBasicFacet<Type>(defaultValue: Type) {
     return Facet.define<Type, Type>({
@@ -15,6 +16,16 @@ export enum FacetValueType {
     Boolean
 }
 
+interface CompartmentItem<T, K = void> {
+    compartment: Compartment;
+    facet: Facet<T, T>;
+    text: string;
+    type: FacetValueType;
+    defaultValue: T;
+    createExtension: (initValue?: T) => Extension;
+    computeFromValue?: (value: K) => T;
+}
+
 function createCompartment<T>({
     facet,
     text,
@@ -23,26 +34,27 @@ function createCompartment<T>({
 }: {
     facet: Facet<T, T>,
     text: string,
-    type: FacetValueType,
-    defaultValue: T
-}) {
+        type: FacetValueType,
+        defaultValue: T
+}): CompartmentItem<T> {
     const compartment = new Compartment;
 
     return {
         compartment,
+        facet,
         text,
         type,
         defaultValue,
-        createExtension: () => compartment.of(facet.of(defaultValue)),
+        createExtension: (initValue?: T) => compartment.of(facet.of(initValue ?? defaultValue)),
     }
 }
 
 export const COMPARTMENTS = {
-    tabSize: createCompartment({
-        facet: EditorState.tabSize,
-        text: 'Tab size',
+    indentUnit: createCompartment({
+        facet: indentUnit,
+        text: 'Number of spaces used for indentation',
         type: FacetValueType.Number,
-        defaultValue: 4
+        defaultValue: '    ',
     }),
     longPressTreshold: createCompartment({
         facet: longPressTreshold,

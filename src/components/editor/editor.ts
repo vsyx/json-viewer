@@ -9,8 +9,9 @@ import { shouldIndentOnPaste, COMPARTMENTS } from './facets';
 import { json, jsonParseLinter } from './json';
 
 const maxDimensionsTheme = EditorView.theme({
-    "&": {height: "100%"},
-    ".cm-scroller": { overflow: "auto" }
+    "&": { height: "100%" },
+    ".cm-scroller": { overflow: "auto" },
+    "&.cm-editor.cm-focused": { outline: '0' }
 });
 
 const indentOnPaste = EditorState.transactionFilter.of(tr => {
@@ -38,7 +39,7 @@ const indentOnPaste = EditorState.transactionFilter.of(tr => {
 export function createJsonEditor(parent: Element | DocumentFragment, editorState: EditorStateConfig = {}) {
     const settings = Object.values(COMPARTMENTS).map(({ createExtension }) => createExtension());
     const fullEditorStateConfig = Object.assign({
-        extensions: [settings, setup, json(), linter(jsonParseLinter()), maxDimensionsTheme, foldPlugin(), indentOnPaste],
+        extensions: [ setup, settings, json(), linter(jsonParseLinter()), maxDimensionsTheme, foldPlugin(), indentOnPaste],
     }, editorState)
 
     const view = new EditorView({

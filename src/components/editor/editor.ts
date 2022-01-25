@@ -1,11 +1,9 @@
 import { setup } from './setup';
-import { EditorState, EditorStateConfig, Transaction, TransactionSpec } from "@codemirror/state";
+import { EditorState, EditorStateConfig } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { foldPlugin } from "./fold";
-import { getIndentUnit } from '@codemirror/language';
-import { indentRangeSpec } from './editorUtils';
 import { linter } from '@codemirror/lint';
-import { shouldIndentOnPaste, COMPARTMENTS } from './facets';
+import {  COMPARTMENTS } from './facets';
 import { json, jsonParseLinter } from './json';
 import { SettingsState } from '../settings/settingsSlice';
 
@@ -15,26 +13,26 @@ const maxDimensionsTheme = EditorView.theme({
     "&.cm-editor.cm-focused": { outline: '0' }
 });
 
-const indentOnPaste = EditorState.transactionFilter.of(tr => {
-    if (tr.annotation(Transaction.userEvent) != 'input.paste'
-        || !tr.startState.facet(shouldIndentOnPaste)) {
-        return tr;
-    }
+//const indentOnPaste = EditorState.transactionFilter.of(tr => {
+    //if (tr.annotation(Transaction.userEvent) != 'input.paste'
+        //|| !tr.startState.facet(shouldIndentOnPaste)) {
+        //return tr;
+    //}
 
-    const indent = getIndentUnit(tr.startState);
-    const transactions: TransactionSpec[] = [];
+    //const indent = getIndentUnit(tr.startState);
+    //const transactions: TransactionSpec[] = [];
 
-    tr.changes.iterChanges((from, to, txtFrom, txtTo, txt) => {
-        const changes = indentRangeSpec(txt.sliceString(txtFrom, txtTo), { from, to }, indent);
-        if (changes !== null) {
-            transactions.push({
-                changes
-            });
-        }
-    });
+    //tr.changes.iterChanges((from, to, txtFrom, txtTo, txt) => {
+        //const changes = indentRangeSpec(txt.sliceString(txtFrom, txtTo), { from, to }, indent);
+        //if (changes !== null) {
+            //transactions.push({
+                //changes
+            //});
+        //}
+    //});
 
-    return !transactions.length ? tr : tr.startState.update(...transactions);
-});
+    //return !transactions.length ? tr : tr.startState.update(...transactions);
+//});
 
 interface EditorConfig {
     settings: SettingsState;
@@ -50,7 +48,7 @@ export function generateExtensions(config: EditorConfig) {
         });
 
     return Object.assign({
-        extensions: [setup, settings, json(), linter(jsonParseLinter()), maxDimensionsTheme, foldPlugin(), indentOnPaste],
+        extensions: [setup, settings, json(), linter(jsonParseLinter()), maxDimensionsTheme, foldPlugin()],
     }, config.editorStateConfig);
 }
 

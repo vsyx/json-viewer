@@ -3,7 +3,7 @@ import React, { useRef, useEffect } from 'react';
 import { createEditorView } from './editor';
 
 import { store } from '../../store';
-import { selectSettings } from '../settings/settingsSlice';
+import { selectSettings, setSettings } from '../settings/settingsSlice';
 import useReduxEditorBridge from './useReduxEditorBridge';
 
 interface Props {

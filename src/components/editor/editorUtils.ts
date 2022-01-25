@@ -1,5 +1,5 @@
 import { foldedRanges as getFoldedRanges, foldEffect, unfoldEffect } from "@codemirror/fold";
-import { syntaxTree, foldInside as foldInsideRange, getIndentUnit } from "@codemirror/language";
+import { syntaxTree, foldInside as foldInsideRange, IndentContext, getIndentation, indentString } from "@codemirror/language";
 import { ChangeSpec, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { NodeType, Tree, TreeCursor } from "@lezer/common";
@@ -109,41 +109,61 @@ export function unfoldAllDeep(view: EditorView, from: number) {
     return foldAll(view, from, range => unfoldEffect.of(range));
 }
 
-// TODO implement using syntaxTree so that it works on incomplete JSON structures
-export function indentRange({ state, dispatch }: EditorView, { from, to }: BasicRange) {
-    const targetString = state.sliceDoc(from, to).trim();
-    if (!targetString.trim().length) {
+function indentRange({ state, dispatch }: EditorView, range: BasicRange) {
+    if (state.readOnly) {
         return false;
     }
 
-    const changes = indentRangeSpec(targetString, { from, to }, getIndentUnit(state));
+    const updated: { [lineStart: number]: number } = Object.create(null)
+    const context = new IndentContext(state, {
+        overrideIndentation: start => {
+            const found = updated[start];
+            return found == null ? -1 : found;
+        },
+        simulateDoubleBreak: true
+    });
 
-    if (changes !== null) {
-        dispatch(state.update({ changes }));
-        return true;
-    }
-    
-    return false;
-}
+    let atLine = -1
+    const changes: ChangeSpec[] = []
 
-export function indentRangeSpec(str: string, { from, to }: BasicRange, indent: number): ChangeSpec | null {
-    try {
-        const parsedJson = JSON.parse(str);
-        return {
-            from,
-            to,
-            insert: JSON.stringify(
-                parsedJson,
-                null,
-                indent
-            )
+    for (let pos = range.from; pos <= range.to;) {
+        const line = state.doc.lineAt(pos)
+        if (line.number > atLine && range.to > line.from) {
+            const indent = getIndentation(context, line.from)
+            if (indent == null) {
+                continue;
+            }
+
+            const cur = /^\s*/.exec(line.text);
+            if (cur == null) {
+                continue;
+            }
+
+            const prevIndent = cur[0];
+            const norm = indentString(state, indent)
+
+            if (prevIndent != norm || range.from < line.from + prevIndent.length) {
+                updated[line.from] = indent
+                changes.push({from: line.from, to: line.from + prevIndent.length, insert: norm})
+            }
+
+            atLine = line.number
         }
-    } catch (err) {
-        if (err instanceof SyntaxError) {
-            return null;
-        }
-        throw err;
+        pos = line.to + 1
     }
+
+    if (!changes.length) {
+        return false;
+    }
+
+    const changeSet = state.changes(changes)
+
+    dispatch(state.update({
+        changes,
+        selection: state.selection.map(changeSet)
+    }));
+
+    return true;
 }
 
 export function indentAll(view: EditorView) {
